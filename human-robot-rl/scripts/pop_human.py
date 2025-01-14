@@ -11,9 +11,9 @@ scene = gs.Scene(
     viewer_options = gs.options.ViewerOptions(
         camera_pos    = (0, -3.5, 2.5),
         camera_lookat = (0.0, 0.0, 0.5),
-        camera_fov    = 30,
+        camera_fov    = 60,
         res           = (960, 640),
-        max_FPS       = 60,
+        max_FPS       = 200,
     ),
     sim_options = gs.options.SimOptions(
         dt = 0.01,

@@ -12,6 +12,7 @@
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <mesh filename="/home/aladinedev/Projects/gitpackages/mmm/model/Base.stl"/>
+        <!-- <box size="0.15 0.161217 0.198658" /> -->
       </geometry>
       <material name="mat3">
         <color rgba="0.5 0.5 0.5 0.5"/> <!-- Grey color with 50% transparency -->
@@ -36,6 +37,7 @@
     <visual>
       <origin xyz="0 0 -0.11" rpy="0 0 -2.5"/>
       <geometry>
+      <!-- <box size="0.15 0.161217 0.198658" /> -->
         <mesh filename="/home/aladinedev/Projects/gitpackages/mmm/model/angle_motor.stl"/>
       </geometry>
       <material name="mat4">
@@ -72,6 +74,7 @@
       <origin xyz="-0.11 -0.0 0.08" rpy="1.57 2.5 1.57"/>
       <geometry>
         <mesh filename="/home/aladinedev/Projects/gitpackages/mmm/model/lower_arm.stl"/>
+        <!-- <box size="0.15 0.161217 0.198658" /> -->
       </geometry>
       <material name="mat1">
         <color rgba="0.5 0.5 0.5 0.5"/> <!-- Grey color with 50% transparency -->
@@ -97,6 +100,7 @@
     <visual>
       <origin xyz="-0.18 0.23 0.08" rpy="1.57 2.55 0.12"/>
       <geometry>
+      <!-- <box size="0.15 0.161217 0.198658" /> -->
         <mesh filename="/home/aladinedev/Projects/gitpackages/mmm/model/upper_arm.stl"/>
       </geometry>
       <material name="mat2">
