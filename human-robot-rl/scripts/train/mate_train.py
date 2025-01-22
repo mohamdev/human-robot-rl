@@ -3,7 +3,7 @@ import os
 import pickle
 import shutil
 
-from go2_env import Go2Env
+from mate_env import MateEnv
 from rsl_rl.runners import OnPolicyRunner
 
 import genesis as gs
@@ -125,7 +125,7 @@ def main():
 
     gs.init(logging_level="warning")
 
-    log_dir = f"logs/{args.exp_name}"
+    log_dir = f"../logs/{args.exp_name}"
     env_cfg, obs_cfg, reward_cfg, command_cfg = get_cfgs()
     train_cfg = get_train_cfg(args.exp_name, args.max_iterations)
 
@@ -133,7 +133,7 @@ def main():
         shutil.rmtree(log_dir)
     os.makedirs(log_dir, exist_ok=True)
 
-    env = Go2Env(
+    env = MateEnv(
         num_envs=args.num_envs, env_cfg=env_cfg, obs_cfg=obs_cfg, reward_cfg=reward_cfg, command_cfg=command_cfg
     )
 
@@ -149,8 +149,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-"""
-# training
-python examples/locomotion/go2_train.py
-"""
