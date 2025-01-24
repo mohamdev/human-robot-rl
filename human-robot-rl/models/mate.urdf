@@ -61,7 +61,7 @@
     <child link="lower_arm"/>
     <origin xyz="0 0 -0.0855" rpy="0 0 -1.5708"/>  <!-- Rotation de -90° autour de X et de Z -->
     <axis xyz="0 0 1"/>
-    <limit effort="100" velocity="100" lower="-1.57" upper="1.57"/>
+    <limit effort="100" velocity="100" lower="-3.14159" upper="3.14159"/>
   </joint>
 
   <link name="lower_arm">
@@ -88,7 +88,7 @@
     <child link="upper_arm"/>
     <origin xyz="0.220 0 0" rpy="0 0 1.5708"/>  <!-- Rotation de 90° autour de Z -->
     <axis xyz="0 0 1"/>
-    <limit effort="100" velocity="100" lower="-1.6" upper="1.6"/>
+    <limit effort="100" velocity="100" lower="-3.14159" upper="3.14159"/>
   </joint>
 
   <link name="upper_arm">

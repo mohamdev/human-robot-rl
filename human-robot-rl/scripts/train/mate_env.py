@@ -20,7 +20,7 @@ class MateEnv:
         self.simulate_action_latency = False 
 
         # self.simulate_action_latency = True  # there is a 1 step latency on real robot
-        self.dt = 0.02  # control frequence on real robot is 50hz
+        self.dt = 0.025  # control frequence on real robot is 50hz
         self.max_episode_length = math.ceil(env_cfg["episode_length_s"] / self.dt)
 
         self.env_cfg = env_cfg
@@ -69,6 +69,22 @@ class MateEnv:
             ),
         )
 
+        # Create a sphere to represent the end-effector position
+        self.ee_sphere = self.scene.add_entity(gs.morphs.Sphere(
+            pos=(0.0, 0.0, 0.0),  # Initial position
+            radius=0.01,          # Small radius for the sphere
+            visualization=True,
+            collision=False,
+        ))
+
+        # Create a sphere to represent the target
+        self.target_sphere = self.scene.add_entity(gs.morphs.Sphere(
+            pos=(0.0, 0.0, 0.0),  # Initial position
+            radius=0.02,          # Small radius for the sphere
+            visualization=True,
+            collision=False,
+        ))
+
         # build
         self.scene.build(n_envs=num_envs)
 
@@ -105,6 +121,7 @@ class MateEnv:
         self.extras = {}
 
     def _resample_commands(self, envs_idx):
+        # print("resample commands")
         # Sample random target positions for the end-effector within the specified ranges
         self.commands[envs_idx, 0] = gs_rand_float(*self.command_cfg["x_pos_range"], (len(envs_idx),), self.device)
         self.commands[envs_idx, 1] = gs_rand_float(*self.command_cfg["y_pos_range"], (len(envs_idx),), self.device)
@@ -116,6 +133,15 @@ class MateEnv:
         exec_actions = self.last_actions if self.simulate_action_latency else self.actions
         target_dof_pos = exec_actions * self.env_cfg["action_scale"] + self.default_dof_pos
         self.robot.control_dofs_position(target_dof_pos, self.motor_dofs)
+
+        # Get end-effector position
+        ee_link = self.robot.get_link("end_effector")
+        ee_pos = ee_link.get_pos()
+        
+        # Update the position of the end-effector sphere
+        self.ee_sphere.set_pos(ee_pos)
+        # print("EE Position:", ee_pos.cpu().numpy())
+        # print("Sphere Position:", self.ee_sphere.get_pos().cpu().numpy())
         self.scene.step()
 
         # Update episode step count
@@ -124,10 +150,6 @@ class MateEnv:
         # Update joint states
         self.dof_pos[:] = self.robot.get_dofs_position(self.motor_dofs)
         self.dof_vel[:] = self.robot.get_dofs_velocity(self.motor_dofs)
-
-        # Get end-effector position
-        ee_link = self.robot.get_link("end_effector")
-        ee_pos = ee_link.get_pos()
 
         # Update commands if necessary
         envs_idx = (
@@ -138,9 +160,12 @@ class MateEnv:
         self._resample_commands(envs_idx)
 
         # Check termination conditions
+        # print("self.episode_length_buf > self.max_episode_length:", self.episode_length_buf > self.max_episode_length)
+        # print("max_episode_length:", self.max_episode_length)
         self.reset_buf = self.episode_length_buf > self.max_episode_length
         self.reset_buf |= ee_pos[:, 2] < self.env_cfg["termination_if_end_effector_z_lower_than"]
-        self.reset_buf |= self.dof_pos[:, 2] < self.env_cfg["termination_if_third_joint_z_lower_than"]
+        # self.reset_buf |= self.dof_pos[:, 2] < self.env_cfg["termination_if_third_joint_z_lower_than"]
+        # print("self.reset_buff:", self.reset_buf)
 
         # Reset environments
         time_out_idx = (self.episode_length_buf > self.max_episode_length).nonzero(as_tuple=False).flatten()
@@ -159,7 +184,7 @@ class MateEnv:
         self.obs_buf = torch.cat(
             [
                 self.dof_pos * self.obs_scales["dof_pos"],  # Joint positions
-                self.dof_vel * self.obs_scales["dof_vel"],  # Joint velocities
+                # self.dof_vel * self.obs_scales["dof_vel"],  # Joint velocities
                 ee_pos * self.obs_scales["end_effector_pos"],  # End-effector position
                 self.commands * self.obs_scales["target_pos"],  # Target position
                 self.actions,  # Previous actions
@@ -193,7 +218,7 @@ class MateEnv:
             zero_velocity=True,
             envs_idx=envs_idx,
         )
-
+        
         # Reset buffers
         self.last_actions[envs_idx] = 0.0
         self.last_dof_vel[envs_idx] = 0.0
@@ -224,12 +249,14 @@ class MateEnv:
         target_pos = self.commands  # Target positions from commands
         distance = torch.sqrt(torch.sum((ee_pos - target_pos) ** 2, dim=1))
         return torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
+        # return -distance*0.1 + torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
+        # return -distance  # Stronger linear penalty
 
-    def _reward_action_rate(self):
-        # Penalize large changes in consecutive actions
-        return -torch.sum(torch.square(self.last_actions - self.actions), dim=1)
+    # def _reward_action_rate(self):
+    #     # Penalize large changes in consecutive actions
+    #     return -torch.sum(torch.square(self.last_actions - self.actions), dim=1)
 
-    def _reward_similar_to_default(self):
-        # Penalize joint configurations far from the default pose
-        return -torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1)
+    # def _reward_similar_to_default(self):
+    #     # Penalize joint configurations far from the default pose
+    #     return -torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1)
 

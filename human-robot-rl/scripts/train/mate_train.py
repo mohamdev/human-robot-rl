@@ -13,18 +13,18 @@ def get_train_cfg(exp_name, max_iterations):
 
     train_cfg_dict = {
         "algorithm": {
-            "clip_param": 0.2,
+            "clip_param": 0.1,
             "desired_kl": 0.01,
-            "entropy_coef": 0.01,
+            "entropy_coef": 0.001,
             "gamma": 0.99,
             "lam": 0.95,
-            "learning_rate": 0.001,
+            "learning_rate": 0.0005,
             "max_grad_norm": 1.0,
-            "num_learning_epochs": 5,
+            "num_learning_epochs": 3,
             "num_mini_batches": 4,
             "schedule": "adaptive",
             "use_clipped_value_loss": True,
-            "value_loss_coef": 1.0,
+            "value_loss_coef": 0.5,
         },
         "init_member_classes": {},
         "policy": {
@@ -40,14 +40,14 @@ def get_train_cfg(exp_name, max_iterations):
             "load_run": -1,
             "log_interval": 1,
             "max_iterations": max_iterations,
-            "num_steps_per_env": 24,
+            "num_steps_per_env": 100,
             "policy_class_name": "ActorCritic",
             "record_interval": -1,
             "resume": False,
             "resume_path": None,
             "run_name": "",
             "runner_class_name": "runner_class_name",
-            "save_interval": 100,
+            "save_interval": 50,
         },
         "runner_class_name": "OnPolicyRunner",
         "seed": 1,
@@ -70,28 +70,28 @@ def get_cfgs():
             "q_3",
         ],
         # PD control gains
-        "kp": 20.0,
-        "kd": 0.5,
+        "kp": 4500.0,
+        "kd": 450.0,
         # Termination conditions
-        "termination_if_end_effector_z_lower_than": -0.1,
+        "termination_if_end_effector_z_lower_than": -10.0,
         "termination_if_third_joint_z_lower_than": 0.0,
         # Base pose
         "base_init_pos": [0.0, 0.0, 0.0],
         "base_init_quat": [1.0, 0.0, 0.0, 0.0],
         # Episode settings
         "episode_length_s": 5.0,
-        "resampling_time_s": 5.0,  # Keep the target constant throughout the episode
-        "action_scale": 0.25,  # Scales actions before applying
+        "resampling_time_s": 1.0,  # Keep the target constant throughout the episode
+        "action_scale": 1.0,  # Scales actions before applying
         "simulate_action_latency": False,  # No latency for simplicity
-        "clip_actions": 3.14,  # Clip actions to stay within joint limits
+        "clip_actions": 10000.0,  # Clip actions to stay within joint limits
     }
 
     obs_cfg = {
-        "num_obs": 15,  # Total number of observations 
+        "num_obs": 12,  # Total number of observations 
         #3 target positions, 3 dof angles, 3 dof velocities, 3 previous actions, 3 EE positions
         "obs_scales": {
             "dof_pos": 1.0,  # Scale for joint positions
-            "dof_vel": 0.1,  # Scale for joint velocities
+            # "dof_vel": 0.1,  # Scale for joint velocities
             "end_effector_pos": 1.0,  # Scale for end-effector positions
             "target_pos": 1.0,  # Scale for target positions
         },
@@ -100,17 +100,17 @@ def get_cfgs():
     reward_cfg = {
         "tracking_sigma": 0.1,  # Higher precision for end-effector tracking
         "reward_scales": {
-            "distance_to_target": 10.0,  # Main reward for minimizing distance to the target
-            "action_rate": -0.01,  # Penalizes large action changes
-            "similar_to_default": -0.1,  # Optional penalty for deviating from default posture
+            "distance_to_target": 1.0,  # Main reward for minimizing distance to the target
+            # "action_rate": -0.0,  # Penalizes large action changes
+            # "similar_to_default": -0.0,  # Optional penalty for deviating from default posture
         },
     }
 
     command_cfg = {
         "num_commands": 3,  # Target position in Cartesian coordinates (x, y, z)
-        "x_pos_range": [-0.25, 0.25],  # Range for the x-coordinate
-        "y_pos_range": [-0.25, 0.25],  # Range for the y-coordinate
-        "z_pos_range": [0.0, 0.5],  # Range for the z-coordinate
+        "x_pos_range": [0.15, 0.3],  # Range for the x-coordinate
+        "y_pos_range": [0.15, 0.3],  # Range for the y-coordinate
+        "z_pos_range": [0.15, 0.45],  # Range for the z-coordinate
     }
 
     return env_cfg, obs_cfg, reward_cfg, command_cfg
@@ -118,9 +118,9 @@ def get_cfgs():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--exp_name", type=str, default="go2-walking")
-    parser.add_argument("-B", "--num_envs", type=int, default=4096)
-    parser.add_argument("--max_iterations", type=int, default=100)
+    parser.add_argument("-e", "--exp_name", type=str, default="mate-reach")
+    parser.add_argument("-B", "--num_envs", type=int, default=5000)
+    parser.add_argument("--max_iterations", type=int, default=1000)
     args = parser.parse_args()
 
     gs.init(logging_level="warning")
