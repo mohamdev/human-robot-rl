@@ -61,7 +61,7 @@ class MateEnv:
         self.inv_base_init_quat = inv_quat(self.base_init_quat)
         self.robot = self.scene.add_entity(
             gs.morphs.URDF(
-                file="../../models/mate.urdf",
+                file="../../../models/mate.urdf",
                 pos=self.base_init_pos.cpu().numpy(),
                 quat=self.base_init_quat.cpu().numpy(),
                 fixed = True,
@@ -135,8 +135,8 @@ class MateEnv:
         self.robot.control_dofs_position(target_dof_pos, self.motor_dofs)
 
         # Get end-effector position
-        ee_link = self.robot.get_link("end_effector")
-        ee_pos = ee_link.get_pos()
+        self.ee_link = self.robot.get_link("end_effector")
+        ee_pos = self.ee_link.get_pos()
         
         # Update the position of the end-effector sphere
         self.ee_sphere.set_pos(ee_pos)
@@ -244,17 +244,17 @@ class MateEnv:
     # ------------ reward functions ----------------
     def _reward_distance_to_target(self):
         # Reward for minimizing the distance between the end-effector and the target
-        ee_link = self.robot.get_link("end_effector")
-        ee_pos = ee_link.get_pos()
+        self.ee_link = self.robot.get_link("end_effector")
+        ee_pos = self.ee_link.get_pos()
         target_pos = self.commands  # Target positions from commands
         distance = torch.sqrt(torch.sum((ee_pos - target_pos) ** 2, dim=1))
-        return torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
-        # return -distance*0.1 + torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
+        # return torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
+        return -distance*1.0 + 0.0*torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
         # return -distance  # Stronger linear penalty
 
-    # def _reward_action_rate(self):
-    #     # Penalize large changes in consecutive actions
-    #     return -torch.sum(torch.square(self.last_actions - self.actions), dim=1)
+    def _reward_action_rate(self):
+        # Penalize large changes in consecutive actions
+        return -torch.sum(torch.square(self.last_actions - self.actions), dim=1)
 
     # def _reward_similar_to_default(self):
     #     # Penalize joint configurations far from the default pose

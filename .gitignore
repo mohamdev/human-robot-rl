@@ -1,5 +1,7 @@
 /*.mp4
-/scripts/*.mp4
-/scripts/utils/__pycache__/
-/scripts/logs/
-/scripts/train/__pycache__/
+human-robot-rl/scripts/*.mp4
+human-robot-rl/scripts/utils/__pycache__/
+human-robot-rl/scripts/logs/
+human-robot-rl/scripts/train/__pycache__/
+human-robot-rl/scripts/train/reach-targets/__pycache__/
+human-robot-rl/scripts/train/reach-targets-panda-impedance/__pycache__/

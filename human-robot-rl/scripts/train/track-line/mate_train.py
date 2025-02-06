@@ -13,9 +13,9 @@ def get_train_cfg(exp_name, max_iterations):
 
     train_cfg_dict = {
         "algorithm": {
-            "clip_param": 0.1,
+            "clip_param": 0.2,
             "desired_kl": 0.01,
-            "entropy_coef": 0.001,
+            "entropy_coef": 0.01,
             "gamma": 0.99,
             "lam": 0.95,
             "learning_rate": 0.0005,
@@ -79,38 +79,41 @@ def get_cfgs():
         "base_init_pos": [0.0, 0.0, 0.0],
         "base_init_quat": [1.0, 0.0, 0.0, 0.0],
         # Episode settings
-        "episode_length_s": 5.0,
-        "resampling_time_s": 1.0,  # Keep the target constant throughout the episode
+        "resampling_time_s": 0.025,  # Update target every step (match control timestep)
+        "episode_length_s": 5.0,    # Time to complete the line
         "action_scale": 1.0,  # Scales actions before applying
         "simulate_action_latency": False,  # No latency for simplicity
         "clip_actions": 10000.0,  # Clip actions to stay within joint limits
     }
 
     obs_cfg = {
-        "num_obs": 12,  # Total number of observations 
+        "num_obs": 15,  # Total number of observations 
         #3 target positions, 3 dof angles, 3 dof velocities, 3 previous actions, 3 EE positions
         "obs_scales": {
             "dof_pos": 1.0,  # Scale for joint positions
             # "dof_vel": 0.1,  # Scale for joint velocities
             "end_effector_pos": 1.0,  # Scale for end-effector positions
             "target_pos": 1.0,  # Scale for target positions
+            "line_direction": 1.0,
         },
     }
 
     reward_cfg = {
-        "tracking_sigma": 0.1,  # Higher precision for end-effector tracking
+        "tracking_sigma": 0.1,
         "reward_scales": {
-            "distance_to_target": 1.0,  # Main reward for minimizing distance to the target
-            # "action_rate": -0.0,  # Penalizes large action changes
-            # "similar_to_default": -0.0,  # Optional penalty for deviating from default posture
-        },
+            "distance_to_target": 1.0,
+            "path_progress": 0.5,  # New component
+        }
     }
 
     command_cfg = {
-        "num_commands": 3,  # Target position in Cartesian coordinates (x, y, z)
-        "x_pos_range": [0.15, 0.3],  # Range for the x-coordinate
-        "y_pos_range": [0.15, 0.3],  # Range for the y-coordinate
-        "z_pos_range": [0.15, 0.45],  # Range for the z-coordinate
+        "num_commands": 6,  # Start (x1,y1,z1) and end (x2,y2,z2) of the line
+        "line_length_range": [0.2, 0.2],  # Length of generated lines
+        "line_center_range": {  # Area where lines are generated
+            "x": [0.2, 0.3],
+            "y": [0.2, 0.3],
+            "z": [0.2, 0.4]
+        },
     }
 
     return env_cfg, obs_cfg, reward_cfg, command_cfg
@@ -118,9 +121,9 @@ def get_cfgs():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--exp_name", type=str, default="mate-reach")
+    parser.add_argument("-e", "--exp_name", type=str, default="mate-reach-dist")
     parser.add_argument("-B", "--num_envs", type=int, default=5000)
-    parser.add_argument("--max_iterations", type=int, default=1000)
+    parser.add_argument("--max_iterations", type=int, default=500)
     args = parser.parse_args()
 
     gs.init(logging_level="warning")
