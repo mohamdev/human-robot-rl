@@ -5,3 +5,4 @@ human-robot-rl/scripts/logs/
 human-robot-rl/scripts/train/__pycache__/
 human-robot-rl/scripts/train/reach-targets/__pycache__/
 human-robot-rl/scripts/train/reach-targets-panda-impedance/__pycache__/
+human-robot-rl/scripts/train/reach-targets-panda-torque/__pycache__/

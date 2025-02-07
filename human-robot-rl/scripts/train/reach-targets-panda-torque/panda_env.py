@@ -87,10 +87,6 @@ class PandaEnv:
         # names to indices
         self.motor_dofs = [self.robot.get_joint(name).dof_idx_local for name in self.env_cfg["dof_names"]]
 
-        # PD control parameters
-        self.robot.set_dofs_kp(kp = np.array(self.env_cfg["kp"]), dofs_idx_local=self.motor_dofs)
-        self.robot.set_dofs_kv(kv = np.array(self.env_cfg["kv"]), dofs_idx_local=self.motor_dofs)
-
         # self.robot.set_dofs_force_range(
         #     lower          = np.array(self.env_cfg["force_lower_bound"]),
         #     upper          = np.array(self.env_cfg["force_upper_bound"]),
@@ -113,6 +109,7 @@ class PandaEnv:
         self.actions = torch.zeros((num_envs, self.num_actions), device=self.device, dtype=gs.tc_float)
         self.last_actions = torch.zeros((num_envs, self.num_actions), device=self.device, dtype=gs.tc_float)
         self.dof_pos = torch.zeros((num_envs, self.num_actions), device=self.device, dtype=gs.tc_float)
+        self.dof_force = torch.zeros_like(self.dof_pos)
         self.dof_vel = torch.zeros_like(self.dof_pos)
         self.last_dof_vel = torch.zeros_like(self.dof_pos)
         self.default_dof_pos = torch.tensor(
@@ -134,8 +131,7 @@ class PandaEnv:
         # Clip and scale actions
         self.actions = torch.clip(actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
         exec_actions = self.last_actions if self.simulate_action_latency else self.actions
-        target_dof_pos = exec_actions * self.env_cfg["action_scale"] + self.default_dof_pos
-        self.robot.control_dofs_position(target_dof_pos, self.motor_dofs)
+        self.robot.control_dofs_position(exec_actions, self.motor_dofs)
 
         # Get end-effector position
         self.ee_link = self.robot.get_link("hand")
@@ -153,6 +149,7 @@ class PandaEnv:
         # Update joint states
         self.dof_pos[:] = self.robot.get_dofs_position(self.motor_dofs)
         self.dof_vel[:] = self.robot.get_dofs_velocity(self.motor_dofs)
+        self.dof_force[:] = self.robot.get_dofs_force(self.motor_dofs)
 
         # Update commands if necessary
         envs_idx = (
@@ -189,6 +186,7 @@ class PandaEnv:
             [
                 self.dof_pos * self.obs_scales["dof_pos"],  # Joint positions
                 # self.dof_vel * self.obs_scales["dof_vel"],  # Joint velocities
+                self.dof_force * self.obs_scales["dof_force"],  # Joint torques
                 ee_pos * self.obs_scales["end_effector_pos"],  # End-effector position
                 self.commands * self.obs_scales["target_pos"],  # Target position
                 self.actions,  # Previous actions
@@ -224,6 +222,7 @@ class PandaEnv:
         )
         
         # Reset buffers
+        self.dof_force[envs_idx] = 0.0
         self.last_actions[envs_idx] = 0.0
         self.last_dof_vel[envs_idx] = 0.0
         self.episode_length_buf[envs_idx] = 0
@@ -252,8 +251,8 @@ class PandaEnv:
         ee_pos = self.ee_link.get_pos()
         target_pos = self.commands  # Target positions from commands
         distance = torch.sqrt(torch.sum((ee_pos - target_pos) ** 2, dim=1))
-        return torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
-        # return -distance*1.0 + 0.0*torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
+        # return torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
+        return -distance**2 + 1.0*torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
         # return -distance**2  # Stronger linear penalty
 
     def _reward_reach_target(self):
@@ -268,6 +267,13 @@ class PandaEnv:
             torch.tensor(0.0, device=distance.device)
         )
         return reward
+
+    def _reward_vel_penalty(self):
+        # Penalize high velocities
+        vel = self.robot.get_dofs_velocity(dofs_idx_local=self.motor_dofs)
+        vel_norm = torch.sqrt(torch.sum(vel ** 2, dim=1))
+        return -vel_norm
+
     # def _reward_action_rate(self):
     #     # Penalize large changes in consecutive actions
     #     distance = torch.sum(torch.square(self.last_actions - self.actions), dim=1)

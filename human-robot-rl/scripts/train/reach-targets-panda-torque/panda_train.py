@@ -81,9 +81,6 @@ def get_cfgs():
             # "finger_joint1",
             # "finger_joint2",
         ],
-        # PD control gains
-        "kp": [4500, 4500, 3500, 3500, 2000, 2000, 2000],
-        "kv": [450, 450, 350, 350, 200, 200, 200],
 
         #Torque bounds
         "force_lower_bound": [-87, -87, -87, -87, -12, -12, -12],
@@ -104,11 +101,12 @@ def get_cfgs():
     }
 
     obs_cfg = {
-        "num_obs": 20,  # Total number of observations 
+        "num_obs": 27,  # Total number of observations 
         #3 target positions, 7 dof angles, 7 dof velocities, 7 previous actions, 3 EE positions
         "obs_scales": {
             "dof_pos": 1.0,  # Scale for joint positions
             # "dof_vel": 0.1,  # Scale for joint velocities
+            "dof_force": 1.0,  # Scale for joint velocities
             "end_effector_pos": 1.0,  # Scale for end-effector positions
             "target_pos": 1.0,  # Scale for target positions
         },
@@ -119,6 +117,7 @@ def get_cfgs():
         "reward_scales": {
             "distance_to_target": 1.0,  # Main reward for minimizing distance to the target
             "reach_target": 1.0,
+            "vel_penalty": 1e-3,
             # "terminal_distance": -1.0,  # Adjust the coefficient as needed
             # "action_rate": 10.0,  # Penalizes large action changes
             # "similar_to_default": -0.0,  # Optional penalty for deviating from default posture
@@ -137,7 +136,7 @@ def get_cfgs():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--exp_name", type=str, default="panda-reach-impedance")
+    parser.add_argument("-e", "--exp_name", type=str, default="panda-reach-torque")
     parser.add_argument("-B", "--num_envs", type=int, default=2000)
     parser.add_argument("--max_iterations", type=int, default=1000)
     args = parser.parse_args()
