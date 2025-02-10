@@ -160,7 +160,7 @@ class PandaEnv:
         # Clip and scale actions
         self.actions = torch.clip(actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
         exec_actions = self.last_actions if self.simulate_action_latency else self.actions
-        self.robot.control_dofs_position(exec_actions, self.motor_dofs)
+        self.robot.control_dofs_force(exec_actions, self.motor_dofs)
 
         # Get end-effector position
         ee_pos = (self.lfinger_link.get_pos() + self.rfinger_link.get_pos())/2.0

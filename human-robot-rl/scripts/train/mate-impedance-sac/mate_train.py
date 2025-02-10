@@ -23,7 +23,7 @@ def print_callback(runner, stats):
 
 def save_model_callback(runner, stats):
     # Save the model every 50 iterations (adjust as needed)
-    if stats["current_iteration"] % 50 == 0:
+    if stats["current_iteration"] % 5000 == 0:
         save_path = os.path.join("../../logs/mate-impedance-sac/", f"model_{stats['current_iteration']}.pt")
         runner.save(save_path)
         print(f"Model saved at iteration {stats['current_iteration']} to {save_path}")
@@ -141,7 +141,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--exp_name", type=str, default="mate-impedance-sac")
     parser.add_argument("-B", "--num_envs", type=int, default=2000)
-    parser.add_argument("--max_iterations", type=int, default=5000)
+    parser.add_argument("--max_iterations", type=int, default=500000)
     args = parser.parse_args()
 
     gs.init(logging_level="warning")
