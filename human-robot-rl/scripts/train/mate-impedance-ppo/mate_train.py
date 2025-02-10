@@ -73,8 +73,8 @@ def get_cfgs():
         "kp": 4500.0,
         "kd": 450.0,
         # Termination conditions
-        "termination_if_end_effector_z_lower_than": -10.0,
-        "termination_if_third_joint_z_lower_than": 0.0,
+        # "termination_if_end_effector_z_lower_than": -10.0,
+        # "termination_if_third_joint_z_lower_than": -10.0,
         # Base pose
         "base_init_pos": [0.0, 0.0, 0.0],
         "base_init_quat": [1.0, 0.0, 0.0, 0.0],

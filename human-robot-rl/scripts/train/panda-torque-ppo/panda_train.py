@@ -15,10 +15,11 @@ def get_train_cfg(exp_name, max_iterations):
         "algorithm": {
             "clip_param": 0.2,
             "desired_kl": 0.01,
-            "entropy_coef": 0.01,
-            "gamma": 0.99,
+            # "entropy_coef": 0.001,
+            # "entropy_coef": 0.01,
+            "gamma": 0.2,
             "lam": 0.95,
-            "learning_rate": 0.0005,
+            "learning_rate": 0.001,
             "max_grad_norm": 1.0,
             "num_learning_epochs": 3,
             "num_mini_batches": 4,
@@ -31,7 +32,10 @@ def get_train_cfg(exp_name, max_iterations):
             "activation": "elu",
             "actor_hidden_dims": [512, 256, 128],
             "critic_hidden_dims": [512, 256, 128],
+            # "actor_hidden_dims": [256, 128],
+            # "critic_hidden_dims": [256, 128],
             "init_noise_std": 1.0,
+            # "init_noise_std": 0.01,
         },
         "runner": {
             "algorithm_class_name": "PPO",
@@ -83,11 +87,14 @@ def get_cfgs():
         ],
 
         #Torque bounds
-        "force_lower_bound": [-87, -87, -87, -87, -12, -12, -12],
-        "force_upper_bound": [ 87,  87,  87,  87,  12,  12,  12],
+        # "force_lower_bound": [-87, -87, -87, -87, -12, -12, -12],
+        # "force_upper_bound": [ 87,  87,  87,  87,  12,  12,  12],
+
+        "q_lower": [-0.0000001, -0.0000001, -0.0000001, -0.0000001, -0.0000001, -0.00000012, -0.00000012],
+        "q_upper": [ 0.0000001,  0.0000001,  0.0000001, 0.00000017,  0.0000001,  0.0000001,  0.0000001],
 
         # Termination conditions
-        # "termination_if_end_effector_z_lower_than": -10.0,
+        "termination_if_end_effector_z_lower_than": 0.15,
         # "termination_if_third_joint_z_lower_than": -10.0,
         # Base pose
         "base_init_pos": [0.0, 0.0, 0.0],
@@ -115,22 +122,21 @@ def get_cfgs():
     reward_cfg = {
         "tracking_sigma": 0.1,  # Higher precision for end-effector tracking
         "reward_scales": {
-            "distance_to_target": 1.0,  # Main reward for minimizing distance to the target
-            "reach_target": 1.0,
-            "vel_penalty": 1e-3,
+            # "distance_to_target": 1.0,  # Main reward for minimizing distance to the target
+            # "reach_target": 1.0,
+            "vel_penalty": 1e-1,
             # "terminal_distance": -1.0,  # Adjust the coefficient as needed
-            # "action_rate": 10.0,  # Penalizes large action changes
-            # "similar_to_default": -0.0,  # Optional penalty for deviating from default posture
+            "action_rate": 1e-2,  # Penalizes large action changes
+            "similar_to_default": 10.0,  # Optional penalty for deviating from default posture
         },
     }
 
     command_cfg = {
         "num_commands": 3,  # Target position in Cartesian coordinates (x, y, z)
-        "x_pos_range": [0.2, 0.4],  # Range for the x-coordinate
-        "y_pos_range": [0.2, 0.4],  # Range for the y-coordinate
-        "z_pos_range": [0.9, 1.1],  # Range for the z-coordinate
+        "x_pos_range": [8.8000e-02, 9.8000e-02],  # Range for the x-coordinate
+        "y_pos_range": [2.5605e-08, 3.5605e-08],  # Range for the y-coordinate
+        "z_pos_range": [8.6760e-01, 8.6760e-01],  # Range for the z-coordinate
     }
-
     return env_cfg, obs_cfg, reward_cfg, command_cfg
 
 
@@ -138,7 +144,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--exp_name", type=str, default="panda-reach-torque")
     parser.add_argument("-B", "--num_envs", type=int, default=2000)
-    parser.add_argument("--max_iterations", type=int, default=1000)
+    parser.add_argument("--max_iterations", type=int, default=15000)
     args = parser.parse_args()
 
     gs.init(logging_level="warning")

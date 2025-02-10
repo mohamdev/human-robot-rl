@@ -38,6 +38,15 @@ robot = scene.add_entity(
         links_to_keep = ['end_effector'])
 )
 
+# Create a sphere to represent the end-effector position
+ee_sphere = scene.add_entity(gs.morphs.Sphere(
+    pos=(0.0, 0.0, 0.0),  # Initial position
+    radius=0.01,          # Small radius for the sphere
+    visualization=True,
+    collision=False,
+))
+
+
 ########################## build ##########################
 scene.build()
 
@@ -69,12 +78,17 @@ robot.set_qpos(qi)
 
 path = robot.plan_path(
     qpos_goal     = qf,
-    num_waypoints = 200, # 2s duration
+    num_waypoints = 2000, # 2s duration
 )
 
 # execute the planned path
 for waypoint in path:
     robot.control_dofs_position(waypoint)
+    ee_link = robot.get_link("end_effector")
+    ee_pos = ee_link.get_pos()
+    
+    # Update the position of the end-effector sphere
+    ee_sphere.set_pos(ee_pos)
     scene.step()
 
 #now go back to initial q, without path planning

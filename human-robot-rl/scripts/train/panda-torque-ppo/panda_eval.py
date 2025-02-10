@@ -12,7 +12,7 @@ import genesis as gs
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--exp_name", type=str, default="panda-reach-torque")
-    parser.add_argument("--ckpt", type=int, default=1000)
+    parser.add_argument("--ckpt", type=int, default=1450)
     args = parser.parse_args()
 
     # Initialize Genesis
@@ -62,13 +62,13 @@ def main():
             # print("resampling_time_s:", env_cfg["resampling_time_s"])
             env.target_sphere.set_pos(target_position)    # Update sphere position
 
-            # Get end-effector position as a NumPy array
-            ee_position = env.ee_link.get_pos().cpu().numpy()
-            env.ee_sphere.set_pos(ee_position)
+            # # Get end-effector position as a NumPy array
+            # ee_position = (env.lfinger_link.get_pos().cpu().numpy() + env.rfinger_link.get_pos().cpu().numpy())/2.0
+            # env.ee_sphere.set_pos(ee_position)
 
             # Compute the residue using NumPy
-            residue = np.sqrt(np.sum((ee_position - target_position) ** 2, axis=1))
-            print("residue =", residue)
+            # residue = np.sqrt(np.sum((ee_position - target_position) ** 2, axis=1))
+            # print("residue =", residue)
 
             # Handle resets
             if dones[0]:  # If the environment resets

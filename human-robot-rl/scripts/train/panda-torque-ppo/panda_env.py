@@ -20,7 +20,7 @@ class PandaEnv:
         self.simulate_action_latency = False 
 
         # self.simulate_action_latency = True  # there is a 1 step latency on real robot
-        self.dt = 0.01  # control frequence on real robot is 100hz
+        self.dt = 0.1  # control frequence on real robot is 100hz
         self.max_episode_length = math.ceil(env_cfg["episode_length_s"] / self.dt)
 
         self.env_cfg = env_cfg
@@ -35,7 +35,7 @@ class PandaEnv:
         self.scene = gs.Scene(
             sim_options=gs.options.SimOptions(dt=self.dt, substeps=2),
             viewer_options=gs.options.ViewerOptions(
-                max_FPS=int(0.5 / self.dt),
+                max_FPS=int(1.0 / (self.dt)),
                 camera_pos=(2.0, 0.0, 2.5),
                 camera_lookat=(0.0, 0.0, 0.5),
                 camera_fov=60,
@@ -68,7 +68,7 @@ class PandaEnv:
         # Create a sphere to represent the end-effector position
         self.ee_sphere = self.scene.add_entity(gs.morphs.Sphere(
             pos=(0.0, 0.0, 0.0),  # Initial position
-            radius=0.01,          # Small radius for the sphere
+            radius=0.03,          # Small radius for the sphere
             visualization=True,
             collision=False,
         ))
@@ -84,6 +84,8 @@ class PandaEnv:
         # build
         self.scene.build(n_envs=num_envs)
 
+        self.lfinger_link = self.robot.get_link("left_finger")
+        self.rfinger_link = self.robot.get_link("right_finger")
         # names to indices
         self.motor_dofs = [self.robot.get_joint(name).dof_idx_local for name in self.env_cfg["dof_names"]]
 
@@ -126,6 +128,33 @@ class PandaEnv:
         self.commands[envs_idx, 1] = gs_rand_float(*self.command_cfg["y_pos_range"], (len(envs_idx),), self.device)
         self.commands[envs_idx, 2] = gs_rand_float(*self.command_cfg["z_pos_range"], (len(envs_idx),), self.device)
 
+    def _resample_commands_joint_space(self, envs_idx):
+        # Convert the configuration bounds to tensors (if not already done)
+        q_lower = torch.tensor(self.env_cfg["q_lower"], device=self.device, dtype=gs.tc_float)
+        q_upper = torch.tensor(self.env_cfg["q_upper"], device=self.device, dtype=gs.tc_float)
+        
+        # Determine the number of environments we want to resample
+        num = len(envs_idx)
+        
+        # Sample random joint configurations (one configuration per environment)
+        # Shape: (num, number of controlled joints)
+        q_rand = gs_rand_float(q_lower, q_upper, (num, len(self.motor_dofs)), self.device)
+        
+        # Set these joint configurations for the selected environments.
+        # (Here we use set_dofs_position; you could also use robot.set_qpos if preferred.)
+        self.robot.set_dofs_position(
+            position=q_rand,
+            dofs_idx_local=self.motor_dofs,
+            zero_velocity=True,
+            envs_idx=envs_idx,
+        )
+        
+        # Compute the end-effector positions for these environments.
+        # (We use the average of left and right finger positions.)
+        # Note: get_pos() returns positions for all environments so we index only the ones we updated.
+        ee_all = (self.lfinger_link.get_pos() + self.rfinger_link.get_pos()) / 2.0
+        self.commands[envs_idx, :] = ee_all[envs_idx]
+
     def step(self, actions):
         # print("step")
         # Clip and scale actions
@@ -134,8 +163,7 @@ class PandaEnv:
         self.robot.control_dofs_position(exec_actions, self.motor_dofs)
 
         # Get end-effector position
-        self.ee_link = self.robot.get_link("hand")
-        ee_pos = self.ee_link.get_pos()
+        ee_pos = (self.lfinger_link.get_pos() + self.rfinger_link.get_pos())/2.0
         
         # Update the position of the end-effector sphere
         self.ee_sphere.set_pos(ee_pos)
@@ -158,12 +186,14 @@ class PandaEnv:
             .flatten()
         )
         # print("envs idx:", envs_idx)
-        self._resample_commands(envs_idx)
-        
+        # self._resample_commands(envs_idx)
+        # self._resample_commands_joint_space(envs_idx)
+
         # Check termination conditions
         # print("self.episode_length_buf > self.max_episode_length:", self.episode_length_buf > self.max_episode_length)
         # print("max_episode_length:", self.max_episode_length)
         self.reset_buf = self.episode_length_buf > self.max_episode_length
+        # self.reset_buf |= ee_pos[:, 2] < self.env_cfg["termination_if_end_effector_z_lower_than"]
         # print("self.episode_length_buf:", self.episode_length_buf)
         # self.reset_buf |= self.dof_pos[:, 2] < self.env_cfg["termination_if_third_joint_z_lower_than"]
         # print("self.reset_buff:", self.reset_buf)
@@ -229,7 +259,8 @@ class PandaEnv:
         self.reset_buf[envs_idx] = True
 
         # Reinitialize commands (new targets for end-effector)
-        self._resample_commands(envs_idx)
+        # self._resample_commands(envs_idx)
+        self._resample_commands_joint_space(envs_idx)
 
         # Reset rewards and extras
         self.extras["episode"] = {}
@@ -247,26 +278,31 @@ class PandaEnv:
     # ------------ reward functions ----------------
     def _reward_distance_to_target(self):
         # Reward for minimizing the distance between the end-effector and the target
-        self.ee_link = self.robot.get_link("hand")
-        ee_pos = self.ee_link.get_pos()
+        # self.ee_link = self.robot.get_link("left_finger")
+        ee_pos = (self.lfinger_link.get_pos() + self.rfinger_link.get_pos())/2.0
         target_pos = self.commands  # Target positions from commands
         distance = torch.sqrt(torch.sum((ee_pos - target_pos) ** 2, dim=1))
-        # return torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
-        return -distance**2 + 1.0*torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
+        return torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
+        # return -distance**2 + 1.0*torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
         # return -distance**2  # Stronger linear penalty
 
-    def _reward_reach_target(self):
-        self.ee_link = self.robot.get_link("hand")
-        ee_pos = self.ee_link.get_pos()
-        target_pos = self.commands  # Target positions from commands
-        distance = torch.sqrt(torch.sum((ee_pos - target_pos) ** 2, dim=1))
-        # Use torch.where to return a tensor of rewards for all environments
-        reward = torch.where(
-            distance < 0.05,
-            torch.tensor(10.0, device=distance.device),
-            torch.tensor(0.0, device=distance.device)
-        )
-        return reward
+    def _reward_similar_to_default(self):
+        # Penalize joint configurations far from the default pose
+        self.dof_pos[:] = self.robot.get_dofs_position(self.motor_dofs)
+        distance = torch.sqrt(torch.sum((self.dof_pos  - 0.0) ** 2, dim=1))
+        return torch.exp(-distance/0.01)
+    # def _reward_reach_target(self):
+    #     self.ee_link = self.robot.get_link("left_finger")
+    #     ee_pos = (self.lfinger_link.get_pos() + self.rfinger_link.get_pos())/2.0
+    #     target_pos = self.commands  # Target positions from commands
+    #     distance = torch.sqrt(torch.sum((ee_pos - target_pos) ** 2, dim=1))
+    #     # Use torch.where to return a tensor of rewards for all environments
+    #     reward = torch.where(
+    #         distance < 0.05,
+    #         torch.tensor(10.0, device=distance.device),
+    #         torch.tensor(0.0, device=distance.device)
+    #     )
+    #     return reward
 
     def _reward_vel_penalty(self):
         # Penalize high velocities
@@ -274,13 +310,9 @@ class PandaEnv:
         vel_norm = torch.sqrt(torch.sum(vel ** 2, dim=1))
         return -vel_norm
 
-    # def _reward_action_rate(self):
-    #     # Penalize large changes in consecutive actions
-    #     distance = torch.sum(torch.square(self.last_actions - self.actions), dim=1)
-    #     print("distance=",distance)
-    #     return torch.exp(-distance)
+    def _reward_action_rate(self):
+        # Penalize large changes in consecutive actions
+        return -torch.sum(torch.square(self.last_actions - self.actions), dim=1)
 
-    # def _reward_similar_to_default(self):
-    #     # Penalize joint configurations far from the default pose
-    #     return -torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1)
+
 
