@@ -20,7 +20,7 @@ class PandaEnv:
         self.simulate_action_latency = False 
 
         # self.simulate_action_latency = True  # there is a 1 step latency on real robot
-        self.dt = 0.1  # control frequence on real robot is 100hz
+        self.dt = 0.025  # control frequence on real robot is 50Hz
         self.max_episode_length = math.ceil(env_cfg["episode_length_s"] / self.dt)
 
         self.env_cfg = env_cfg
@@ -162,6 +162,8 @@ class PandaEnv:
         exec_actions = self.last_actions if self.simulate_action_latency else self.actions
         self.robot.control_dofs_force(exec_actions, self.motor_dofs)
 
+        self.lfinger_link = self.robot.get_link("left_finger")
+        self.rfinger_link = self.robot.get_link("right_finger")
         # Get end-effector position
         ee_pos = (self.lfinger_link.get_pos() + self.rfinger_link.get_pos())/2.0
         
@@ -186,7 +188,7 @@ class PandaEnv:
             .flatten()
         )
         # print("envs idx:", envs_idx)
-        # self._resample_commands(envs_idx)
+        self._resample_commands(envs_idx)
         # self._resample_commands_joint_space(envs_idx)
 
         # Check termination conditions
@@ -252,15 +254,15 @@ class PandaEnv:
         )
         
         # Reset buffers
-        self.dof_force[envs_idx] = 0.0
         self.last_actions[envs_idx] = 0.0
         self.last_dof_vel[envs_idx] = 0.0
+        self.dof_force[envs_idx] = 0.0
         self.episode_length_buf[envs_idx] = 0
         self.reset_buf[envs_idx] = True
 
         # Reinitialize commands (new targets for end-effector)
-        # self._resample_commands(envs_idx)
-        self._resample_commands_joint_space(envs_idx)
+        self._resample_commands(envs_idx)
+        # self._resample_commands_joint_space(envs_idx)
 
         # Reset rewards and extras
         self.extras["episode"] = {}
@@ -278,7 +280,8 @@ class PandaEnv:
     # ------------ reward functions ----------------
     def _reward_distance_to_target(self):
         # Reward for minimizing the distance between the end-effector and the target
-        # self.ee_link = self.robot.get_link("left_finger")
+        self.lfinger_link = self.robot.get_link("left_finger")
+        self.rfinger_link = self.robot.get_link("right_finger")
         ee_pos = (self.lfinger_link.get_pos() + self.rfinger_link.get_pos())/2.0
         target_pos = self.commands  # Target positions from commands
         distance = torch.sqrt(torch.sum((ee_pos - target_pos) ** 2, dim=1))
@@ -286,11 +289,11 @@ class PandaEnv:
         # return -distance**2 + 1.0*torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
         # return -distance**2  # Stronger linear penalty
 
-    def _reward_similar_to_default(self):
-        # Penalize joint configurations far from the default pose
-        self.dof_pos[:] = self.robot.get_dofs_position(self.motor_dofs)
-        distance = torch.sqrt(torch.sum((self.dof_pos  - 0.0) ** 2, dim=1))
-        return torch.exp(-distance/0.01)
+    # def _reward_similar_to_default(self):
+    #     # Penalize joint configurations far from the default pose
+    #     self.dof_pos[:] = self.robot.get_dofs_position(self.motor_dofs)
+    #     distance = torch.sqrt(torch.sum((self.dof_pos) ** 2, dim=1))
+    #     return torch.exp(-distance/0.01)
     # def _reward_reach_target(self):
     #     self.ee_link = self.robot.get_link("left_finger")
     #     ee_pos = (self.lfinger_link.get_pos() + self.rfinger_link.get_pos())/2.0
@@ -304,15 +307,15 @@ class PandaEnv:
     #     )
     #     return reward
 
-    def _reward_vel_penalty(self):
-        # Penalize high velocities
-        vel = self.robot.get_dofs_velocity(dofs_idx_local=self.motor_dofs)
-        vel_norm = torch.sqrt(torch.sum(vel ** 2, dim=1))
-        return -vel_norm
+    # def _reward_vel_penalty(self):
+    #     # Penalize high velocities
+    #     vel = self.robot.get_dofs_velocity(dofs_idx_local=self.motor_dofs)
+    #     vel_norm = torch.sqrt(torch.sum(vel ** 2, dim=1))
+    #     return -vel_norm
 
-    def _reward_action_rate(self):
-        # Penalize large changes in consecutive actions
-        return -torch.sum(torch.square(self.last_actions - self.actions), dim=1)
+    # def _reward_action_rate(self):
+    #     # Penalize large changes in consecutive actions
+    #     return -torch.sum(torch.square(self.last_actions - self.actions), dim=1)
 
 
 

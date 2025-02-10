@@ -15,11 +15,10 @@ def get_train_cfg(exp_name, max_iterations):
         "algorithm": {
             "clip_param": 0.2,
             "desired_kl": 0.01,
-            # "entropy_coef": 0.001,
-            # "entropy_coef": 0.01,
-            "gamma": 0.2,
+            "entropy_coef": 0.01,
+            "gamma": 0.99,
             "lam": 0.95,
-            "learning_rate": 0.001,
+            "learning_rate": 0.0005,
             "max_grad_norm": 1.0,
             "num_learning_epochs": 3,
             "num_mini_batches": 4,
@@ -122,12 +121,12 @@ def get_cfgs():
     reward_cfg = {
         "tracking_sigma": 0.1,  # Higher precision for end-effector tracking
         "reward_scales": {
-            # "distance_to_target": 1.0,  # Main reward for minimizing distance to the target
+            "distance_to_target": 1.0,  # Main reward for minimizing distance to the target
             # "reach_target": 1.0,
-            "vel_penalty": 1e-1,
+            # "vel_penalty": 1e-1,
             # "terminal_distance": -1.0,  # Adjust the coefficient as needed
-            "action_rate": 1e-2,  # Penalizes large action changes
-            "similar_to_default": 10.0,  # Optional penalty for deviating from default posture
+            # "action_rate": 1e-2,  # Penalizes large action changes
+            # "similar_to_default": 1.0,  # Optional penalty for deviating from default posture
         },
     }
 
@@ -142,7 +141,7 @@ def get_cfgs():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--exp_name", type=str, default="panda-reach-torque")
+    parser.add_argument("-e", "--exp_name", type=str, default="panda-torque-ppo")
     parser.add_argument("-B", "--num_envs", type=int, default=2000)
     parser.add_argument("--max_iterations", type=int, default=15000)
     args = parser.parse_args()

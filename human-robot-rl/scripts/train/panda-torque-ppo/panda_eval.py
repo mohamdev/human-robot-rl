@@ -11,8 +11,8 @@ import genesis as gs
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--exp_name", type=str, default="panda-reach-torque")
-    parser.add_argument("--ckpt", type=int, default=1450)
+    parser.add_argument("-e", "--exp_name", type=str, default="panda-torque-ppo")
+    parser.add_argument("--ckpt", type=int, default=250)
     args = parser.parse_args()
 
     # Initialize Genesis
