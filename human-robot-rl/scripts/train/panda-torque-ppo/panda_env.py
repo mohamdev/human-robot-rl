@@ -89,11 +89,11 @@ class PandaEnv:
         # names to indices
         self.motor_dofs = [self.robot.get_joint(name).dof_idx_local for name in self.env_cfg["dof_names"]]
 
-        # self.robot.set_dofs_force_range(
-        #     lower          = np.array(self.env_cfg["force_lower_bound"]),
-        #     upper          = np.array(self.env_cfg["force_upper_bound"]),
-        #     dofs_idx_local = self.motor_dofs,
-        # )
+        self.robot.set_dofs_force_range(
+            lower          = np.array(self.env_cfg["force_lower_bound"]),
+            upper          = np.array(self.env_cfg["force_upper_bound"]),
+            dofs_idx_local = self.motor_dofs,
+        )
 
         # prepare reward functions and multiply reward scales by dt
         self.reward_functions, self.episode_sums = dict(), dict()
@@ -289,11 +289,18 @@ class PandaEnv:
         # return -distance**2 + 1.0*torch.exp(-distance / self.reward_cfg["tracking_sigma"])  # Exponential decay reward
         # return -distance**2  # Stronger linear penalty
 
-    # def _reward_similar_to_default(self):
-    #     # Penalize joint configurations far from the default pose
-    #     self.dof_pos[:] = self.robot.get_dofs_position(self.motor_dofs)
-    #     distance = torch.sqrt(torch.sum((self.dof_pos) ** 2, dim=1))
-    #     return torch.exp(-distance/0.01)
+    def _reward_similar_to_default(self):
+        # Penalize joint configurations far from the default pose
+        self.dof_pos[:] = self.robot.get_dofs_position(self.motor_dofs)
+        # print(self.dof_pos[:])
+        distance = torch.sqrt(torch.sum((self.dof_pos) ** 2, dim=1))
+        return -distance**2
+    
+    def _reward_torques_norm(self):
+        self.dof_force[:] = self.robot.get_dofs_flrce(self.motor_dofs)
+        # print(self.dof_pos[:])
+        distance = torch.sqrt(torch.sum((self.dof_force) ** 2, dim=1))
+        return -distance**2
     # def _reward_reach_target(self):
     #     self.ee_link = self.robot.get_link("left_finger")
     #     ee_pos = (self.lfinger_link.get_pos() + self.rfinger_link.get_pos())/2.0
