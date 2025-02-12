@@ -12,7 +12,7 @@ import genesis as gs
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--exp_name", type=str, default="panda-torque-ppo")
-    parser.add_argument("--ckpt", type=int, default=1000)
+    parser.add_argument("--ckpt", type=int, default=2800)
     args = parser.parse_args()
 
     # Initialize Genesis
@@ -52,8 +52,9 @@ def main():
         while True:
             # Get actions from the policy
             actions = policy(obs)
-            print("joint angles:", actions)
+            print("joint torques:", actions)
             obs, _, rews, dones, infos = env.step(actions)
+            print("joint angles:", env.robot.get_dofs_position())
             # print("actions:", actions)
 
             # Update the target sphere position

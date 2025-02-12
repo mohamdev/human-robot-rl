@@ -119,7 +119,7 @@ def get_cfgs():
     }
 
     reward_cfg = {
-        "tracking_sigma": 0.01,  # Higher precision for end-effector tracking
+        "tracking_sigma": 0.1,  # Higher precision for end-effector tracking
         "reward_scales": {
             "distance_to_target": 1.0,  # Main reward for minimizing distance to the target
             # "reach_target": 1.0,
@@ -137,8 +137,8 @@ def get_cfgs():
         # "y_pos_range": [2.5605e-08, 3.5605e-08],  # Range for the y-coordinate
         # "z_pos_range": [8.6760e-01, 8.6760e-01],  # Range for the z-coordinate
 
-        "x_pos_range": [2.8000e-01, 5.8000e-01],  # Range for the x-coordinate
-        "y_pos_range": [2.5605e-01, 5.5605e-01],  # Range for the y-coordinate
+        "x_pos_range": [2.8000e-01, 6.8000e-01],  # Range for the x-coordinate
+        "y_pos_range": [2.5605e-01, 6.5605e-01],  # Range for the y-coordinate
         "z_pos_range": [5.6760e-01, 7.6760e-01],  # Range for the z-coordinate
 
         # "x_pos_range": [-2.8000e-01, 2.8000e-01],  # Range for the x-coordinate
@@ -151,7 +151,7 @@ def get_cfgs():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--exp_name", type=str, default="panda-torque-ppo")
-    parser.add_argument("-B", "--num_envs", type=int, default=3000)
+    parser.add_argument("-B", "--num_envs", type=int, default=2800)
     parser.add_argument("--max_iterations", type=int, default=15000)
     args = parser.parse_args()
 
@@ -170,7 +170,7 @@ def main():
     )
 
     runner = OnPolicyRunner(env, train_cfg, log_dir, device="cuda:0")
-    resume_path = os.path.join("../../logs/ok-policies/", f"model_4400_new.pt")
+    resume_path = os.path.join("../../logs/ok-policies/", f"model_2800.pt")
     runner.load(resume_path)
 
     # runner = OnPolicyRunner(env, train_cfg, log_dir, device="cuda:0")
@@ -181,7 +181,6 @@ def main():
     )
 
     runner.learn(num_learning_iterations=args.max_iterations, init_at_random_ep_len=True)
-
 
 if __name__ == "__main__":
     main()

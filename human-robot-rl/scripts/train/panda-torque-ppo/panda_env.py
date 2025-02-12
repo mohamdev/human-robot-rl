@@ -297,10 +297,10 @@ class PandaEnv:
         return -distance**2
     
     def _reward_torques_norm(self):
-        self.dof_force[:] = self.robot.get_dofs_flrce(self.motor_dofs)
+        self.dof_force[:] = self.robot.get_dofs_force(self.motor_dofs)
         # print(self.dof_pos[:])
         distance = torch.sqrt(torch.sum((self.dof_force) ** 2, dim=1))
-        return -distance**2
+        return -distance
     # def _reward_reach_target(self):
     #     self.ee_link = self.robot.get_link("left_finger")
     #     ee_pos = (self.lfinger_link.get_pos() + self.rfinger_link.get_pos())/2.0
